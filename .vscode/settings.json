@@ -1,0 +1,33 @@
+{
+    "files.associations": {
+        "kernel.h": "c",
+        "fs.h": "c",
+        "moduleparam.h": "c",
+        "module.h": "c",
+        "init.h": "c",
+        "compiler.h": "c",
+        "compiler_types.h": "c",
+        "sched.h": "c",
+        "types.h": "c",
+        "path.h": "c",
+        "dcache.h": "c",
+        "math.h": "c",
+        "lockref.h": "c",
+        "spinlock.h": "c",
+        "uaccess.h": "c",
+        "string.h": "c",
+        "ratelimit.h": "c",
+        "proc_fs.h": "c",
+        "fcntl.h": "c",
+        "time.h": "c",
+        "cdev.h": "c",
+        "kd.h": "c",
+        "wait.h": "c",
+        "version.h": "c",
+        "semaphore.h": "c",
+        "list.h": "c",
+        "limits.h": "c",
+        "ioctl.h": "c"
+    },
+    "C_Cpp.dimInactiveRegions": false
+}
