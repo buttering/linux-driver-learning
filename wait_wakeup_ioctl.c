@@ -3,7 +3,7 @@
 #include <linux/cdev.h>
 #include <linux/kdev_t.h>
 #include <linux/fs.h>
-// DECLARE_WAIT_QUEUE_HEAD()
+// DECLARE_WAIT_QUEUE_HEAD(), wait_queue_head_t
 #include <linux/wait.h>
 #include <linux/sched.h>
 #include <linux/version.h>
@@ -15,8 +15,11 @@
 
 #define WW_IOC_MAGIC 'w'  // ioctl幻数
 #define WW_IOCTEST _IOR(WW_IOC_MAGIC, 0, char*)
+#define WW_IOCTEST_PTR _IOR(WW_IOC_MAGIC, 1, int)
 #define WW_IOC_MAXNR 1
 
+//  ioctl测试
+static int kernelnumber = 55;
 
 struct ww_dev {
     struct cdev cdev;
@@ -26,7 +29,7 @@ struct ww_dev {
     int flag;  // 休眠标志
     wait_queue_head_t wait_queue;  // 简单休眠队列
     struct semaphore sem;  // 互斥信号量
-} dev;
+};
 
 // 提供给驱动程序以初始化人力，从而为以后的操作完成初始化做准备
 static int ww_open(struct inode *inode, struct file *filp){
@@ -59,6 +62,7 @@ static ssize_t ww_read(struct file *filp, char __user *buf, size_t count, loff_t
     return 0;
 }
 
+
 // write方法，用户调用此方法唤醒所有因read陷入休眠的进程，但只有一个进程跳出休眠
 static ssize_t ww_write(struct file *filp, const char __user *buf, size_t count, loff_t *ppost){
     struct ww_dev *dev = filp->private_data;
@@ -79,6 +83,8 @@ static long io_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
 #endif
     int retval = 0;
     printk(KERN_NOTICE "ioctl called!\n");
+
+    /* 检测命令的有效性 */
     if (_IOC_TYPE(cmd) != WW_IOC_MAGIC){
         printk(KERN_ALERT "wrong ioc magic: \"%c\" is not equal \"%c\"!\n", _IOC_TYPE(cmd), WW_IOC_MAGIC);
         return -ENOTTY;
@@ -88,9 +94,13 @@ static long io_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
         return -ENOTTY;
     }
     switch(cmd) {
-        case WW_IOCTEST:
-            printk(KERN_INFO "\nioctl called\n");
+        int ret;
+        case WW_IOCTEST_PTR:
+            ret = put_user(kernelnumber, (int __user *) arg);
+            printk("[ioctl read] output number: %d\n", kernelnumber);
             break;
+        case WW_IOCTEST:
+            return kernelnumber;
     }
 
     return retval;

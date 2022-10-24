@@ -31,4 +31,5 @@ sudo dmesg -C
 sudo rm -r /dev/${device}
 sudo rmmod $module.ko
 dmesg
+sudo dmesg -C
 exit 0

@@ -1,6 +1,6 @@
-# obj-m += hello_driver.o
+obj-m += hello_driver.o
 # obj-m += proc_interface.o
-obj-m += wait_wakeup_ioctl.o
+# obj-m += wait_wakeup_ioctl.o
 # 说明有一个模块需要从main.o中构造，构造的模块名称为xxx.ko
 
 all:

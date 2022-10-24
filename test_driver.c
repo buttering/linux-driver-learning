@@ -1,11 +1,14 @@
+//  以下三个头文件实现open()
 #include <sys/types.h>//这里提供类型pid_t和size_t的定义
 #include <sys/stat.h>
-// open()
 #include <fcntl.h>
-// #include <stdlib.h>
+// read(), write(), close()
+#include <unistd.h>
 #include <string.h>
+// printf()
 #include <stdio.h>
-
+// atoi()
+#include <stdlib.h>
 
 int main(int argc, char const *argv[])
 {
@@ -21,7 +24,7 @@ int main(int argc, char const *argv[])
         goto out;
     }
 
-    if (atoi(argv[1]) == 1){    
+    if ( atoi(argv[1]) == 1){    
         ret = read(fd, readbuf, 50);
         if (ret < 0){
             printf("read file %s failed!\r\n", filename);

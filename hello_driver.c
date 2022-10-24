@@ -44,10 +44,13 @@ static char kerneldata[] = {"This is the kernel data"};
 
 // 定义字符设备操作函数
 static int hello_open(struct inode *inode, struct file *filp){
+    // filp指向内核file结构，代表一个打开的文件
+    printk("dev file opened\n");
     return 0;
 }
 
 static int hello_release(struct inode *inode, struct file *filp){
+    printk("dev file closed\n");
     return 0;
 }
 
@@ -58,7 +61,7 @@ static ssize_t hello_read(struct file *filp, char __user *buf, size_t count, lof
     memcpy(readbuf, kerneldata, sizeof(kerneldata));
 
     ret = copy_to_user(buf, readbuf, count);
-    printk_ratelimited(KERN_INFO "[read data]output string: %s\n", readbuf);  // 限制打印速率，但不知为何没有效果
+    printk_ratelimited(KERN_INFO "[read data]output string: %s\n", readbuf);
 
     return count;
 }

@@ -20,6 +20,10 @@ elif [ $test_file_name = "wait_wakeup_ioctl" ]
 then
     module="wait_wakeup_ioctl"
     device="wwdev"
+elif [ $test_file_name = "poll_select" ]
+then
+    module="poll_select"
+    device="polldev"
 else 
     echo "\033[31mnot match file name!\033[31m"
     exit
@@ -53,7 +57,7 @@ fi
 echo -n "\033[33mload driver: \033[0m"
 cat /proc/devices | grep $device
 
-# 在/dev目录下注册
+# 在/dev目录下注册设备文件 
 major=$(awk '$2=="'$device'" {print $1}' /proc/devices)
 sudo mknod /dev/${device} c $major 0
 echo -n "\033[33mload device node: \033[0m"
