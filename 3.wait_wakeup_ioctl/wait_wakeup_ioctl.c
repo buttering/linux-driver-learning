@@ -29,7 +29,7 @@ struct ww_dev {
     int flag;  // 休眠标志
     wait_queue_head_t wait_queue;  // 简单休眠队列
     struct semaphore sem;  // 互斥信号量
-};
+}dev;
 
 // 提供给驱动程序以初始化人力，从而为以后的操作完成初始化做准备
 static int ww_open(struct inode *inode, struct file *filp){
@@ -97,9 +97,10 @@ static long io_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
         int ret;
         case WW_IOCTEST_PTR:
             ret = put_user(kernelnumber, (int __user *) arg);
-            printk("[ioctl read] output number: %d\n", kernelnumber);
+            printk("[ioctl read] output number to ptr: %d\n", kernelnumber);
             break;
         case WW_IOCTEST:
+            printk("[ioctl read] output number by return: %d\n", kernelnumber);
             return kernelnumber;
     }
 

@@ -88,25 +88,26 @@ static const struct file_operations hello_fops = {
 };
 
 static void setup_cdev(struct hello_dev *dev) {
-
+    int err;
     cdev_init(&dev->cdev, &hello_fops);
-    int err = cdev_add(&dev->cdev, dev->devid, 1);
+    err = cdev_add(&dev->cdev, dev->devid, 1);
     if (err)
         printk(KERN_NOTICE "Error %d adding\n", err);
 }
 
 // __init标记表示函数经在初始化使用，初始化后会丢弃函数，释放内存
 static int __init hello_init(void) {
+    int i, ret;
     printk(KERN_ALERT "Hello, world\n");
     printk(KERN_INFO "The process is \"%s\" (pid %i)\n", current->comm, current->pid);
-    int i = 0;
+    i = 0;
     while (i < howmany) {
         printk(KERN_INFO "Hello, %s", whom);
         i ++;
     }
 
     // 分配设备编号
-    int ret = 0;
+    ret = 0;
     if (dev.major) {  // 静态注册设备号
         dev.devid = MKDEV(dev.major, 0);
         ret = register_chrdev_region(dev.devid, 1, "hello_dev");

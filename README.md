@@ -53,41 +53,60 @@ sh ./clean.sh ${testfile_name}
 
 ### 1.hello_driver.c
 
-本文件完成驱动程序基本的注册、挂载和卸载，并测试file_operations结构体的使用。
+本文件完成驱动程序基本的注册、挂载和卸载，并测试file_operations结构体的使用(读取、写入操作）。
 
-1.Makefile取消注释：
+1. 进入目录
 
-```makefile
-obj-m += hello_driver.o
+```shell
+cd 1.hello_driver
+chmod +x test.sh
+chmod +x clean.sh
 ```
 
-2.编译驱动并运行测试脚本
+2.编译驱动
 
 ```shell
 make
-sh ./test.sh hello_driver
 ```
 
-3.编译测试文件
+3.运行测试文件
 
 ```shell
-gcc test_driver.c -o test_driver
+sh test.sh hello_driver
 ```
 
-4.读取操作
+4.运行结果
 
 ```shell
-./test_driver 1
+❯ sh test.sh hello_driver
+module: hello_driver
+device: hello_dev
+[ 2315.228068] Goodbye, World!
+---OLD DRIVER CLEARED---
+
+kernal: 5.15.0-50-generic
+load driver: 506 hello_dev
+load device node: crw-r--r-- 1 root root 506, 0 10月 25 14:50 /dev/hello_dev
+device node change group: crw-rw-r-- 1 root wang 506, 0 10月 25 14:50 /dev/hello_dev
+[ 2315.331563] Hello, world
+[ 2315.331571] The process is "insmod" (pid 10133)
+[ 2315.331575] Hello, Mom
+[ 2315.331576] Hello, Mom
+[ 2315.331578] Hello, Mom
+[ 2315.331581] dev major = 506, minor = 0
+向驱动读取数据
+App read data:This is the kernel data
+[ 2315.557830] dev file opened
+[ 2315.557842] [read task]count=50
+[ 2315.557845] [read data]output string: This is the kernel data
+[ 2315.557968] dev file closed
+向驱动写入数据
+[ 2315.576305] dev file opened
+[ 2315.576322] [write data]input string: This is user data!
+[ 2315.576328] dev file closed
 ```
 
-5.写入操作
-
-```shell
-./test_driver 2
-dmesg
-```
-
-6.卸载驱动
+6.卸载和清理驱动
 
 ```shell
 sh ./clean.sh hello_driver
@@ -98,83 +117,145 @@ make clean
 
 测试proc接口的挂载操作，并尝试从/proc接口中读取信息。
 
-1.Makefile取消注释：
+1.进入目录并授权
 
 ```makefile
-obj-m += proc_interface.o
+cd 2.proc_interface
+chmod +x test.sh
+chmod +x clean.sh
 ```
 
 2.编译驱动并运行测试脚本
 
 ```shell
 make
-sh ./test.sh proc_interface
 ```
 
-3.卸载驱动
+3.运行测试脚本
+
+```shell
+sh test.sh proc_interface
+```
+
+4.运行结果
+
+```shell
+❯ sh test.sh proc_interface
+module: proc_interface
+device: hello_dev
+proc: hello_proc
+rm: 无法删除 '/dev/hello_dev': 没有那个文件或目录
+rmmod: ERROR: Module proc_interface is not currently loaded
+---OLD DRIVER CLEARED---
+
+kernal: 5.15.0-50-generic
+load driver: 506 hello_dev
+load device node: crw-r--r-- 1 root root 506, 0 10月 25 19:33 /dev/hello_dev
+proc information is: This is a /proc interface output.
+[ 1708.649623] unregister_chrdev_region
+[ 1934.897420] Hello, world
+[ 1934.897425] The process is "insmod" (pid 10126)
+[ 1934.897428] dev major = 506, minor = 0
+[ 1934.926393] proc interface is called
+
+```
+
+5.卸载和清理驱动
 
 ```shell
 sh ./clean.sh proc_interface
 make clean
 ```
 
-### wait_wakeup_ioctl.c
+### 3. wait_wakeup_ioctl.c
 
 测试linux内核的阻塞与唤醒操作和原子化操作，以及测试ioctl调用
 
-1.Makefile取消注释：
+1.进入目录并授权测试脚本
 
 ```makefile
-obj-m += wait_wakeup_ioctl.o
+cd 3.wait_wakeup_ioctl
+chmod +x test.sh
+chmod +x clean.sh
 ```
 
-2.编译驱动并运行测试脚本
+2.编译驱动
 
 ```shell
 make
-sh ./test.sh wait_wakeup_ioctl
 ```
 
-3.编译测试文件
+3.运行测试脚本
 
 ```shell
-gcc test_ioctl.c -o test_ioctl
+sh test.sh wait_wakeup_ioctl
 ```
 
-4.读取操作，实现阻塞，可开启多个shell测试
+4.运行结果
+
+```shell
+❯ sh test.sh wait_wakeup_ioctl
+module: wait_wakeup_ioctl
+device: wwdev
+testfile: test_ioctl
+rm: 无法删除 '/dev/wwdev': 没有那个文件或目录
+rmmod: ERROR: Module wait_wakeup_ioctl is not currently loaded
+rm: 无法删除 'test_ioctl': 没有那个文件或目录
+---OLD DRIVER CLEARED---
+
+kernal: 5.15.0-50-generic
+load driver: 506 wwdev
+load device node: crw-r--r-- 1 root root 506, 0 10月 25 20:13 /dev/wwdev
+device node change group: crw-rw-r-- 1 root wang 506, 0 10月 25 20:13 /dev/wwdev
+
+sub process read operation to wait... 
+write operation to wakeup sub process... 
+[ 3734.409463] [writer]process 14072 (sh) awakening the readers...
+[ 3734.410665] [reader]process 14103 (cat) going to sleep
+[ 3734.410674] [reader]awoken 14103 (cat)
+
+传入指针由ioctl修改值
+ioctl read result: 55
+[ 3734.505092] ioctl called!
+[ 3734.505095] [ioctl read] output number to ptr: 55
+直接接受ioctl调用返回值
+ioctl read result: 55
+[ 3734.521584] ioctl called!
+[ 3734.521588] [ioctl read] output number by return: 55
+```
+
+5.继续尝试和写入读取操作
+
+通过读取操作实现阻塞，可开启多个终端运行
 
 ```shell
 cat /dev/wwdev
 ```
 
-5.写入操作，实现进程的唤醒，每次调用唤醒一个被阻塞的进程
+另开一个终端，通过写入操作，实现进程的唤醒，每次调用唤醒一个被阻塞的进程
 
 ```shell
 echo 1 > /dev/wwdev
 dmesg
 ```
 
-6.ioctl 调用
+6.卸载和清理驱动
 
 ```shell
-./test_ioctl
-```
-
-7.卸载驱动
-
-```shell
-sh ./clean.sh wait_wakeup_ioctl
+sh clean.sh wait_wakeup_ioctl
 make clean
 ```
 
-### poll_select.c
+### 4. poll_select.c
 
 实验了poll系统调用的各种情况，使用class_create完成自动节点注册和多节点挂载
 
-1.进入目录
+1.进入目录，提供权限
 
 ```shell
 cd poll_select
+chmod +x test.sh
+chmod +x clean.sh
 ```
 
 2.编译驱动

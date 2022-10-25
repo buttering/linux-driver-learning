@@ -38,9 +38,9 @@ static const struct file_operations hello_fops = {
 };
 
 static void setup_cdev(struct hello_dev *dev) {
-
+    int err;
     cdev_init(&dev->cdev, &hello_fops);
-    int err = cdev_add(&dev->cdev, dev->devid, 1);
+    err = cdev_add(&dev->cdev, dev->devid, 1);
     if (err)
         printk(KERN_NOTICE "Error %d adding", err);
 }
@@ -48,6 +48,7 @@ static void setup_cdev(struct hello_dev *dev) {
 // 使用/proc文件系统（3.10以上）
 // 1.实现show()方法，供内核将数据输出到用户空间
 static int hello_proc_show(struct seq_file *s, void *v){
+    printk("proc interface is called\n");
     seq_printf(s, "This is a /proc interface output.\n");
     return 0;
 }
@@ -80,11 +81,12 @@ static const struct file_operations proc_fops = {
 
 
 static int __init device_init(void){
+    int ret = 0;
+
     printk(KERN_ALERT "Hello, world\n");
     printk(KERN_INFO "The process is \"%s\" (pid %i)\n", current->comm, current->pid);
        
     // 分配设备编号
-    int ret = 0;
     if (dev.major) {  // 静态注册设备号
         dev.devid = MKDEV(dev.major, 0);
         ret = register_chrdev_region(dev.devid, 1, "hello_dev");

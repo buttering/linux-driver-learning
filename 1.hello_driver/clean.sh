@@ -11,19 +11,14 @@ if [ $test_file_name = "hello_driver" ]
 then
     module="hello_driver"
     device="hello_dev"
-elif [ $test_file_name = "proc_interface" ]
-then
-    module="proc_interface"
-    device="hello_dev"
-elif [ $test_file_name = "wait_wakeup_ioctl" ]
-then
-    module="wait_wakeup_ioctl"
-    device="wwdev"
-elif [ $test_file_name = "poll_select" ]
-then
-    module="poll_select"
-    device="polldev"
+    testfile="test_driver"
 else    
+    exit 1
+fi
+
+if test -z $device
+then
+    echo "\033[31mgdevice is empty!\033[31m"
     exit 1
 fi
 
@@ -31,4 +26,7 @@ sudo dmesg -C
 sudo rm -r /dev/${device}
 sudo rmmod $module.ko
 dmesg
+sudo dmesg -C
+
+rm $testfile
 exit 0
