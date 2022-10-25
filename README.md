@@ -1,5 +1,15 @@
 # LINUX 设备驱动程序学习测试代码
 
+- [LINUX 设备驱动程序学习测试代码](#linux-设备驱动程序学习测试代码)
+  - [项目说明](#项目说明)
+  - [项目结构](#项目结构)
+  - [实验运行方法](#实验运行方法)
+    - [1.hello\_driver.c](#1hello_driverc)
+    - [2. proc\_interface.c](#2-proc_interfacec)
+    - [3. wait\_wakeup\_ioctl.c](#3-wait_wakeup_ioctlc)
+    - [4. poll\_select.c](#4-poll_selectc)
+  - [实验环境](#实验环境)
+
 ## 项目说明
 
 本项目展示作者研读《LINUX设备驱动程序》所编写的所有测试代码。
@@ -13,43 +23,24 @@
 6. ioctl调用
 7. poll调用
 
-## 总体运行方法
+## 项目结构
 
-### 1. 根据文件修改Makefile注释
+每个文件夹是一个独立demo，分别完成对一个或多个功能的实验。
 
-只需根据所运行的不同文件注释文件开头的变量。
-具体修改方法见测试方法说明
+文件夹下文件作用如下：
 
-### 2. 编译驱动 提供执行权限
+1. {foldername}.c
+   驱动程序，是项目的核心文件。
+2. test_xxx.c
+   测试文件，必要时编译为用户态应用程序以对驱动进行测试。
+3. Makefile
+   用于控制编译驱动程序。
+4. test.sh
+   测试脚本，完整完成驱动程序的挂载、调用，测试文件的编译和调用。
+5. clean.sh
+   清理脚本，完成驱动程序的卸载和编译文件的清理。
 
-```shell
-cd HELLODRIVER
-make
-chmod +x test.sh
-chmod +x clean.sh
-```
-
-### 3. 编译测试文件
-
-```shell
-gcc ${testfile_name}.c -o $testfile
-```
-
-testfile_name是需要运行的测试文件名，具体见测试方法说明
-
-### 4. 运行test.sh进行测试
-
-```shell
-sh ./test.sh ${testfile_name}
-```
-
-### 5. 清理驱动
-
-```shell
-sh ./clean.sh ${testfile_name}
-```
-
-## 具体测试方法
+## 实验运行方法
 
 ### 1.hello_driver.c
 
