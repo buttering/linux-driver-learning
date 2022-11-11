@@ -1,5 +1,24 @@
 # Linxu MMC 驱动子系统
 
+- [Linxu MMC 驱动子系统](#linxu-mmc-驱动子系统)
+	- [硬件关联](#硬件关联)
+	- [目录说明](#目录说明)
+	- [mmc子系统的逻辑架构](#mmc子系统的逻辑架构)
+	- [设备-总线-驱动模型](#设备-总线-驱动模型)
+		- [一、MMC驱动抽象模型](#一mmc驱动抽象模型)
+		- [二、SDIO驱动抽象模型](#二sdio驱动抽象模型)
+		- [三、MMC/SDIO总线](#三mmcsdio总线)
+			- [1. 总线结构体定义](#1-总线结构体定义)
+			- [2. 总线注册](#2-总线注册)
+			- [3. 驱动注册](#3-驱动注册)
+			- [4. 设备注册](#4-设备注册)
+		- [四、MMC设备控制器（mmc host）](#四mmc设备控制器mmc-host)
+	- [MMC驱动注册](#mmc驱动注册)
+	- [MMC设备注册](#mmc设备注册)
+	- [注册过程(瑞芯微MMC驱动源码)](#注册过程瑞芯微mmc驱动源码)
+	- [mmc卡(mmc type card)协议相关操作](#mmc卡mmc-type-card协议相关操作)
+	- [参考资料](#参考资料)
+
 SD/SDIO/MMC 驱动是一种基于 SDMMC 和 SD SPI 主机驱动的协议级驱动程序，目前已支持 SD 存储器、SDIO 卡和 eMMC 芯片。
 
 因为linux内核mmc子系统里面已经实现了这些协议，我们以后并不需要重新实现这些，只需要对协议有个简单的了解。
@@ -59,11 +78,12 @@ drivers/mmc/core/mmc-ops.c（提供和mmc type card协议相关的操作）
 
 在Linux驱动模型框架下，三者对应结构体以及MMC驱动子系统对应的实现关系如下：
 
-- 总线\[struct bus_type\] ———— MMC总线（ mmc_bus )
-- 设备\[struct device\] ———— 被封装在platform_device下的**主设备****host**
-- 驱动\[struct device_driver\] ———— 依附于MMC总线的MMC驱动( mmc_driver )
+- 总线 (struct bus_type) —— MMC总线（ mmc_bus )
+- 设备(struct device) —— 被封装在platform_device下的**主设备** **host**
+- 驱动 (struct device_driver)  —— 依附于MMC总线的MMC驱动( mmc_driver )
 
 三者之间的关联图如下，每一个具体的总线均包括设备与驱动两部分，而每一个具体总线的所有添加的设备均链接至device下，每一个总线的所有注册的驱动均链接至drivers，而bus接口所有实现的功能也可以大致分为总线的注册、设备的注册、驱动的注册这三个部分。
+
 ![设备总线驱动模型](resource/设备-总线-驱动关联图.jpg)
 
 设备和对应的驱动必须依附于同一种总线
@@ -72,9 +92,9 @@ drivers/mmc/core/mmc-ops.c（提供和mmc type card协议相关的操作）
 
 MMC驱动模型也是基于实际的硬件连接进行抽象的
 
+- 针对通信总线，抽象出**mmc_bus**；
 - 针对mmc controller，该子系统抽象为**mmc_host**，用于描述一个进行设备通信的控制器，提供了相应的访问接口（记为mmc_host->request）；
 - 针对mmc、sd、tf卡具体设备，该子系统抽象为**mmc_card**，用于描述卡信息。mmc子系统提供年rescan接口用于mmc card的注册；
-- 针对通信总线，抽象出**mmc_bus**；
 - 针对mmc、sd、tf，mmc子系统完成了统一的**mmc driver**，针对mmc总线规范以及SD规范，其已经详细的定义了一个存储卡的通信方式、通信命令，因此LINUXmmc子系统定义了mmc driver，用于和mmc、sd、tf等卡的通信，而**不需要**驱动开发人员来开发卡驱动。
 
 ![bus dribber host card](resource/bus%20driver%20host%20card%20关联图.jpeg)
@@ -92,7 +112,7 @@ sdio总线驱动模型和mmc类似，结构体上的区别为其driver类型为s
 
 因sdio主要突出接口概念，其设备端可以连接wifi、gps等设备，因此其外设备驱动**需要**由驱动工程师自己实现，sdio驱动模块不提供对应的驱动。
 
-### 三、MMC总线
+### 三、MMC/SDIO总线
 
 总线接口实现的功能可分为总线的注册、设备的注册、驱动的注册这三个部分。
 
@@ -140,6 +160,8 @@ static struct bus_type sdio_bus_type = {
 
 #### 2. 总线注册
 
+- 针对通信总线，抽象出**mmc_bus**；
+
 调用入口位于```core/core.c```，通过```mmc_init()```实现。
 
 *core/core.c*
@@ -174,8 +196,14 @@ b. ```sdio_register_bus```这是sdio的部分，它比较特殊，需要额外�
 - 利用 bus_register() 注册 mmc_bus，包括mmc总线和sdio总线。对应sysfs下的 /sys/bus/mmc/ 目录。
 - 利用 class_register() 注册 mmc_host_class 。对应sysfs下的 /sys/class/mmc_host 目录。
 
-关键函数为：```bus_register()```
-device_register
+*core/bus.c*
+
+```c
+int mmc_register_bus(void)
+{
+	// 实际调用内核接口,注册总线
+	return bus_register(&mmc_bus_type);
+}
 ```
 
 *core/sdio_bus.c*
@@ -232,7 +260,10 @@ static int __init mmc_blk_init(void)
 ```
 
 *core/bus.c*
-mmc_ops
+
+```c
+int mmc_register_driver(struct mmc_driver *drv)
+{
 	drv->drv.bus = &mmc_bus_type;
 	// 实际调用内核接口,注册设备到总线系统
 	return driver_register(&drv->drv);
@@ -277,7 +308,6 @@ int sdio_register_driver(struct sdio_driver *drv)
 	drv->drv.bus = &sdio_bus_type;
 	return driver_register(&drv->drv);
 }
-device_register
 EXPORT_SYMBOL_GPL(sdio_register_driver);
 ```
 
@@ -295,7 +325,7 @@ module_platform_driver(mvsd_driver);
 static struct platform_driver mvsd_driver = device_register{
 	.probe		= mvsd_probe,
 	.remove		= mvsd_remove,
-	.driver		= {
+	.driver		= {线
 		.name	= DRIVER_NAME,
 		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
 		.of_match_table = mvsdio_dt_ids,
@@ -307,7 +337,7 @@ static int mvsd_probe(struct platform_device *pdev)
 {
 	// ……
 	// 实例化一个控制器对象
-	mmc = mmc_alloc_host(sizeof(struct mvsd_host), &pdev->dev);
+	mmc = mmc_alloc_host(sizeof(s线truct mvsd_host), &pdev->dev);
 	// ……
 	mmc->ops = &mvsd_ops;  // 控制器操作集
 	// ……（一系列对控制器对象的初始化工作）
@@ -315,9 +345,9 @@ static int mvsd_probe(struct platform_device *pdev)
 	// ……
 }
 
-// 制器操作集，编写控制器驱动的一个主要任务就是实现这个操作集
+// 控制器操作集，编写控制器驱动的一个主要任务就是实现这个操作集
 static const struct mmc_host_ops mvsd_ops = {
-	.request		= mvsd_request,  // 最终执行硬件操作的函数，参数由核心层提供，由核心层更上一层的card设备驱动层向下调用
+	.request		= mvsd_request,  // 最终执行硬件操作的函数，参数由核心层提供，由核心层更上一层的card设备驱动层向下调用线
 	.get_ro			= mmc_gpio_get_ro,  // 判断是否写保护
 	.set_ios		= mvsd_set_ios,  // 配置控制器的函数
 	.enable_sdio_irq	= mvsd_enable_sdio_irq,  // 与sdio相关
@@ -328,7 +358,7 @@ static const struct mmc_host_ops mvsd_ops = {
 
 mmc host子系统提供了延迟队列机制，在执行mmc_alloc_host、mmc_add_host后，则完成了mmc card rescan延迟工作队列及其处理接口的创建```INIT_DELAYED_WORK```
 
-若要触发mmc card rescan（即调度工作队列），则调用**mmc_detect_change**接口，即可触发mmc card rescan(即完成mmc_host->detect队列的调度)；
+若要触发mmc card rescan（即调度工作队列），则调用**mmc_detect_change**接口，即可触发m线mc card rescan(即完成mmc_host->detect队列的调度)；
 
 ```c
 struct mmc_host *mmc_alloc_host(int extra, struct device *dev)
@@ -338,7 +368,7 @@ struct mmc_host *mmc_alloc_host(int extra, struct device *dev)
 	INIT_DELAYED_WORK(&host->detect, mmc_rescan);
 	// ……
 }
-
+线
 EXPORT_SYMBOL(mmc_alloc_host);
 ```
 
@@ -367,11 +397,11 @@ mmc_rescan[core.c]-->
 			mmc_init_card[mmc.c]-->
 				mmc_alloc_card[bus.c]
 			mmc_add_card[bus.c]
- ``` 
+```
 
 从mmc_rescan调用关系中可以看出，mmc设备注册的过程依次完成了sdio设备、sd卡和mmc卡设备的初始化。
 
-**A. mmc_attach_sdio**
+**A. mmc_attach_sdio()**
 SDIO卡初始化的入口
 
 a. 向卡发送CMD5命令，该命令有两个作用：
@@ -384,7 +414,7 @@ a. 向卡发送CMD5命令，该命令有两个作用：
 
 第二，如果是SDIO设备，就会给host反馈电压信息，就是说告诉host，本卡所能支持的电压是多少多少。
 
-b. 设置sdio卡的总线操作集```mmc_attach_bus()```，传入struct mmc_bus_ops类型的实现mmc_sdio_ops。
+b. 设置sdio卡的总线操作集```mmc_atta线ch_bus()```，传入struct mmc_bus_ops类型的实现mmc_sdio_ops。
 
 ```c
 void mmc_attach_bus(struct mmc_host *host, const struct mmc_bus_ops *ops)
@@ -393,19 +423,18 @@ void mmc_attach_bus(struct mmc_host *host, const struct mmc_bus_ops *ops)
 }
 ```
 
-c. host根据SDIO卡反馈回来的电压要求，给其提供合适的电压```mmc_select_voltage()```
+c. host根据SDIO卡反馈回来的电压要求，给其提供合适的电压```mmc_select_voltage()```线
 
 d. 对sdio卡进行探测和初始化```mmc_sdio_init_card()```
 
 e. 注册SDIO的各个功能模块```sdio_init_func()```
 
 f. 注册SDIO卡```mmc_add_card()```
-mmc_sdio_ops)
 
 g. 将所有SDIO功能添加到device架构中```sdio_add_func()```
 
 **mmc_alloc_card():**
-调用device模型对应的接口完成device类型变量的初始化，并完成mmc_card与mmc_host的绑定。
+调用device模型对应的接口完成device线
 
 **mmc_add_card():**
 
@@ -415,7 +444,7 @@ g. 将所有SDIO功能添加到device架构中```sdio_add_func()```
 **sdio func**
  sdio_func的注册与注销接口对应于mmc_card的注册与注销接口。主要函数有sdio_alloc_func、sdio_add_func、sdio_remove_func、sdio_release_func（相比mmc card，多了针对acpi的配置调用）
 
-**B. mmc_attach_sd**
+**B. mmc_attach_sd()**
 SD卡初始化的入口
 
 a. 发送CMD41指令，（sd卡支持该指令，但mmc卡不支持，所以可以以此区分）```mmc_send_app_op_cond()```
@@ -424,11 +453,11 @@ b. 设置sdio卡的总线操作集```mmc_attach_bus()```，传入struct mmc_bus_
 
 c. 设置合适的电压```mmc_select_voltage()```
 
-d. 调用```mmc_sd_init_card()```（探测和初始化），获取mmc card的csd、cid，并创建mmc_card，并对mmc card进行初始化（如是否只读等信息）
+d. 调用```mmc_sd_init_card()```（探测和初始化），获取mmc card的csd、cid，并创建mmc_card，并对mmc card进行初始化（如是否只读等信息）线
 
 e.调用```mmc_add_card()```，将该mmc_card注册至mmc_bus中，该接口会调用device_register将mmc_card注册至mmc_bus上，而这即触发mmc_driver与mmc_card的绑定流程，从而调用mmc_driver->probe接口，即执行mmc block device的注册操作（待解决，没有找到device_register相关代码）。
 
-**c. mmc_attach_mmc**
+**c. mmc_attach_mmc()**
 mmc卡初始化入口
 
 a. 发送CMD1指令```mmc_send_op_cond()```
@@ -460,6 +489,10 @@ struct mmc_bus_ops {
 	int (*flush_cache)(struct mmc_host *);
 };
 ```
+
+### 四、MMC设备控制器（mmc host）
+
+
 
 ## MMC驱动注册
 
@@ -573,5 +606,5 @@ mmc_ops提供了部分和mmc卡协议相关的操作。
 6. [LINUX设备驱动模型分析之二 总线（BUS）接口分析](https://jerry-cheng.blog.csdn.net/article/details/102709219)
 7. [LINUX MMC子系统分析之三 MMC/SDIO总线接口分析](https://jerry-cheng.blog.csdn.net/article/details/104717889)
 8. [LINUX设备驱动模型分析之三 驱动（DRIVER）接口分析](https://jerry-cheng.blog.csdn.net/artdevice_add62696.html)
-9. [LINUX MMC 子系统分析之六 MMC card添加流程分析](https://blog.csdn.net/lickylin/article/details/104718117)device_add
+9. [LINUX MMC 子系统分析之六 MMC card添加流程分析](https://blog.csdn.net/lickylin/article/details/104718117)
 10. [Linux内核4.14版本——mmc core(4)——card相关模块（mmc type card）](https://blog.csdn.net/yangguoyu8023/article/details/122554472)
