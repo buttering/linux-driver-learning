@@ -14,8 +14,7 @@ fi
 test_file_name=$1
 if [ $test_file_name = "wait_wakeup_ioctl" ]
 then
-    module="wait_wakeup_ioctl"
-    device="wwdev"
+#include <linux/init.h>    device="wwdev"
     testfile="test_ioctl"
 else 
     echo "\033[31mnot match file name!\033[31m"
@@ -29,7 +28,7 @@ echo -n "\033[33mtestfile: \033[0m"
 echo $testfile
 
 # 运行clean
-./clean.sh $test_file_name
+sh clean.sh $test_file_name
 if [ $? -ne 0 ]
 then
     exit

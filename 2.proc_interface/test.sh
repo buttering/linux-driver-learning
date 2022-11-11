@@ -24,7 +24,7 @@ echo -n "\033[33mproc: \033[0m"
 echo $proc
 
 # 运行clean
-./clean.sh $test_file_name
+sh clean.sh $test_file_name
 if [ $? -ne 0 ]
 then
     exit

@@ -15,7 +15,7 @@
 #include <linux/kdev_t.h>
 // copy_to_user()
 #include <linux/uaccess.h>
-// kfree(), kmalloc()
+// kfree(), kmalloc() 
 #include <linux/slab.h>
 // printk_ratelimited
 #include <linux/ratelimit.h>

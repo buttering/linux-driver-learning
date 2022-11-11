@@ -29,7 +29,7 @@ echo $device
 
 
 # 运行clean
-./clean.sh $test_file_name
+sh clean.sh $test_file_name
 if [ $? -ne 0 ]
 then
     exit
