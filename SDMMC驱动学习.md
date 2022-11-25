@@ -14,10 +14,12 @@
 			- [4. 设备注册](#4-设备注册)
 		- [四、MMC设备控制器（mmc host）](#四mmc设备控制器mmc-host)
 			- [1. 控制器结构体定义](#1-控制器结构体定义)
+	- [指示host支持的功能特性，包括4bit数据模式、mmc high speed mode、sd high speed mode、spi mode、8bit data、noneremovable mode（emmc mode）、cd与wp引脚的active high/low等等。](#指示host支持的功能特性包括4bit数据模式mmc-high-speed-modesd-high-speed-modespi-mode8bit-datanoneremovable-modeemmc-modecd与wp引脚的active-highlow等等)
 	- [MMC驱动注册](#mmc驱动注册)
 	- [MMC设备注册](#mmc设备注册)
 	- [注册过程(瑞芯微MMC驱动源码)](#注册过程瑞芯微mmc驱动源码)
 	- [mmc卡(mmc type card)协议相关操作](#mmc卡mmc-type-card协议相关操作)
+	- [DTS配置](#dts配置)
 	- [参考资料](#参考资料)
 
 SD/SDIO/MMC 驱动是一种基于 SDMMC 和 SD SPI 主机驱动的协议级驱动程序，目前已支持 SD 存储器、SDIO 卡和 eMMC 芯片。
@@ -30,7 +32,7 @@ mmc是比较老的存储卡了，sd是mmc的替代者，sdio是基于sd而额外
 
 CPU、MMC controller、存储设备之间的关联如下图所示，主要包括了MMC controller、总线、存储卡等内容的连接，针对控制器与设备的总线连接，主要包括时钟、数据、命令三种类型的引脚，而这些引脚中的cd引脚主要用于卡的在位检测，当mmc controller检测到该位的变化后，则会进行mmc card的注册或注销操作。
 
-![cpu-mmc](./resource/cpu%20mmc硬件关联图.jpeg)
+![cpu-mmc](./graph/cpu%20mmc硬件关联图.jpeg)
 
 ## 目录说明
 
@@ -49,22 +51,24 @@ MMC子系统从上到下分为3层
 - **核心层**(MMC core)：是不同协议和规范的实现，为MMC控制器层和块设备驱动层提供接口函数。
   
   核心层封装了 MMC/SD 卡的命令（CMD)，例如存储卡的识别、设置、读写、识别、设置等命令。
-
+  
   MMC核心层由三个部分组成：MMC，SD和SDIO，分别为三类设备驱动提供接口函数；
-
+  
   core.c 把 MMC 卡、 SD 卡的共性抽象出来，它们的差别由 sd.c 和 sd_ops.c 、 mmc.c 和 mmc_ops.c 来完成。
 
-- **控制器层**(MMC host)：主机端MMC controller的驱动，依赖于平台。由struct mmc_host描述,围绕此结构设计了struct mmc_host_ops(访问方法)、struct mmc_ios(相关参数)、struct mmc_bus_ops(电源管理和在位检测方法)
-  
-  针对不同芯片，实现不同控制器对应的驱动代码。
+- **控制器层**(MMC host)：主机端MMC controller的驱动，依赖于平台，由struct mmc_host描述。
 
-![框架结构](resource/mmc子系统框架结构图.jpeg)
+  围绕此结构设计了struct mmc_host_ops(访问方法)、struct mmc_ios(相关参数)、struct mmc_bus_ops(电源管理和在位检测方法)
+  
+针对不同芯片，实现不同控制器对应的驱动代码。
+
+![框架结构](graph/mmc子系统框架结构图.jpeg)
 
 块设备层与Linux的块设备子系统对接，实现块设备驱动以及完成请求，具体协议经过核心层的接口，最终通过控制器层完成传输，对MMC设备进行实际的操作。
 
 更详细的结构图如下，指明了个部分的相关实现文件：
 
-![模块连接](resource/mmc子系统模块连接图.png)
+![模块连接](graph/mmc子系统模块连接图.png)
 
 mmc core指的是mmc 子系统的核心，这里的mmc表示的是mmc总线、结构、设备相关的统称，而下方文件名的mmc单指mmc卡，区别于sd卡和sdio卡。
 
@@ -85,7 +89,7 @@ drivers/mmc/core/mmc-ops.c（提供和mmc type card协议相关的操作）
 
 三者之间的关联图如下，每一个具体的总线均包括设备与驱动两部分，而每一个具体总线的所有添加的设备均链接至device下，每一个总线的所有注册的驱动均链接至drivers，而bus接口所有实现的功能也可以大致分为总线的注册、设备的注册、驱动的注册这三个部分。
 
-![设备总线驱动模型](resource/设备-总线-驱动关联图.jpg)
+![设备总线驱动模型](graph/设备-总线-驱动关联图.jpg)
 
 设备和对应的驱动必须依附于同一种总线
 
@@ -98,7 +102,7 @@ MMC驱动模型也是基于实际的硬件连接进行抽象的
 - 针对mmc、sd、tf卡具体设备，该子系统抽象为**mmc_card**，用于描述卡信息。mmc子系统提供年rescan接口用于mmc card的注册；
 - 针对mmc、sd、tf，mmc子系统完成了统一的**mmc driver**，针对mmc总线规范以及SD规范，其已经详细的定义了一个存储卡的通信方式、通信命令，因此LINUXmmc子系统定义了mmc driver，用于和mmc、sd、tf等卡的通信，而**不需要**驱动开发人员来开发卡驱动。
 
-![bus dribber host card](resource/bus%20driver%20host%20card%20关联图.jpeg)
+![bus dribber host card](graph/bus%20driver%20host%20card%20关联图.jpeg)
 
 特点:
 
@@ -124,18 +128,18 @@ sdio总线驱动模型和mmc类似，结构体上的区别为其driver类型为s
 ```c
 static struct bus_type mmc_bus_type = {
   // 总线名称
-	.name		= "mmc",
-	.dev_groups	= mmc_dev_groups,
-	// match接口用于实现mmc card与mmc driver的匹配检测，返回值均为1；
-	.match		= mmc_bus_match,  
-	// 应用层通知接口,用于添加该mmc bus的uevent参数（在调用device_add时，会调用kobject_uevent向应用层发送设备添加相关的事件,而kobject_uevent会调用该device所属bus和class的uevent接口，添加需要发送到应用的event参数
-	.uevent		= mmc_bus_uevent,
-	// probe接口主要用于mmc card与mmc driver匹配成功后，则会调用该mmc bus的probe接口实现探测操作；
-	.probe		= mmc_bus_probe,
-	// remove接口主要用于mmc card与mmc driver解绑时，调用该接口，进行remove操作（对于mmc drivemmc_ops
-	.shutdown	= mmc_bus_shutdown,
-	// pm是电源管理相关的接口。
-	.pm		= &mmc_bus_pm_ops,
+    .name        = "mmc",
+    .dev_groups    = mmc_dev_groups,
+    // match接口用于实现mmc card与mmc driver的匹配检测，返回值均为1；
+    .match        = mmc_bus_match,  
+    // 应用层通知接口,用于添加该mmc bus的uevent参数（在调用device_add时，会调用kobject_uevent向应用层发送设备添加相关的事件,而kobject_uevent会调用该device所属bus和class的uevent接口，添加需要发送到应用的event参数
+    .uevent        = mmc_bus_uevent,
+    // probe接口主要用于mmc card与mmc driver匹配成功后，则会调用该mmc bus的probe接口实现探测操作；
+    .probe        = mmc_bus_probe,
+    // remove接口主要用于mmc card与mmc driver解绑时，调用该接口，进行remove操作（对于mmc drivemmc_ops
+    .shutdown    = mmc_bus_shutdown,
+    // pm是电源管理相关的接口。
+    .pm        = &mmc_bus_pm_ops,
 };
 ```
 
@@ -149,13 +153,13 @@ static struct bus_type mmc_bus_type = {
 
 ```c
 static struct bus_type sdio_bus_type = {
-	.name		= "sdio",
-	.dev_groups	= sdio_dev_groups,mmc_ops
-	.match		= sdio_bus_match,  // 根据id_table来匹配
-	.uevent		= sdio_bus_uevent,
-	.probe		= sdio_bus_probe,
-	.remove		= sdio_bus_remove,
-	.pm		= &sdio_bus_pm_ops,
+    .name        = "sdio",
+    .dev_groups    = sdio_dev_groups,mmc_ops
+    .match        = sdio_bus_match,  // 根据id_table来匹配
+    .uevent        = sdio_bus_uevent,
+    .probe        = sdio_bus_probe,
+    .remove        = sdio_bus_remove,
+    .pm        = &sdio_bus_pm_ops,
 };
 ```
 
@@ -170,17 +174,17 @@ subsys_initcall(mmc_init);
 
 static int __init mmc_init(void)
 {
-	int ret;
-	// 将mmc总线注册到linux的总线系统中,管理块设备
-	ret = mmc_register_bus();
+    int ret;
+    // 将mmc总线注册到linux的总线系统中,管理块设备
+    ret = mmc_register_bus();
 
-	// 注册mmc_host_class
-	ret = mmc_register_host_class();
+    // 注册mmc_host_class
+    ret = mmc_register_host_class();
 
-	// 注册sido总线到linux的总线系统中,管理sdio接口类型的设备
-	ret = sdio_register_bus();
+    // 注册sido总线到linux的总线系统中,管理sdio接口类型的设备
+    ret = sdio_register_bus();
 
-	return 0;
+    return 0;
 }
 ```
 
@@ -200,8 +204,8 @@ b. ```sdio_register_bus```这是sdio的部分，它比较特殊，需要额外�
 ```c
 int mmc_register_bus(void)
 {
-	// 实际调用内核接口,注册总线
-	return bus_register(&mmc_bus_type);
+    // 实际调用内核接口,注册总线
+    return bus_register(&mmc_bus_type);
 }
 ```
 
@@ -210,7 +214,7 @@ int mmc_register_bus(void)
 ```c
 int sdio_register_bus(void)
 {
-	return bus_register(&sdio_bus_type);
+    return bus_register(&sdio_bus_type);
 }
 ```
 
@@ -222,13 +226,13 @@ mmc_dirver的注册、注销接口是对内核函数的封装。实现将mmc_dri
 
 ```c
 static struct mmc_driver mmc_driver = {
-	.drv		= {device_register
-		.name	= "mmcblk",
-		.pm	= &mmc_blk_pm_ops,
-	},
-	.probe		= mmc_blk_probe,  // probe回调函数
-	.remove		= mmc_blk_remove,
-	.shutdown	= mmc_blk_shutdown,
+    .drv        = {device_register
+        .name    = "mmcblk",
+        .pm    = &mmc_blk_pm_ops,
+    },
+    .probe        = mmc_blk_probe,  // probe回调函数
+    .remove        = mmc_blk_remove,
+    .shutdown    = mmc_blk_shutdown,
 };
 ```
 
@@ -241,20 +245,20 @@ module_init(mmc_blk_init);
 
 static int __init mmc_blk_init(void)
 {
-	int res;
+    int res;
 
-	// 注册mmc_rpmb_bus总线
-	res  = bus_register(&mmc_rpmb_bus_type);
+    // 注册mmc_rpmb_bus总线
+    res  = bus_register(&mmc_rpmb_bus_type);
 
-	res = alloc_chrdev_region(&mmc_rpmb_devt, 0, MAX_DEVICES, "rpmb");
+    res = alloc_chrdev_region(&mmc_rpmb_devt, 0, MAX_DEVICES, "rpmb");
 
-	// 注册块设备，申请块设备号
-	res = register_blkdev(MMC_BLOCK_MAJOR, "mmc");
+    // 注册块设备，申请块设备号
+    res = register_blkdev(MMC_BLOCK_MAJOR, "mmc");
 
-	// 将mmc_driver注册到mmc_bus总线系统中
-	res = mmc_register_driver(&mmc_driver);
+    // 将mmc_driver注册到mmc_bus总线系统中
+    res = mmc_register_driver(&mmc_driver);
 
-	return 0;
+    return 0;
 }
 ```
 
@@ -263,9 +267,9 @@ static int __init mmc_blk_init(void)
 ```c
 int mmc_register_driver(struct mmc_driver *drv)
 {
-	drv->drv.bus = &mmc_bus_type;
-	// 实际调用内核接口,注册设备到总线系统
-	return driver_register(&drv->drv);
+    drv->drv.bus = &mmc_bus_type;
+    // 实际调用内核接口,注册设备到总线系统
+    return driver_register(&drv->drv);
 }
 
 // 使用EXPORT_SYMBOL将函数以符号的方式导出给其他模块使用。
@@ -275,7 +279,7 @@ EXPORT_SYMBOL(mmc_register_driver);
 主要步骤包括：
 
 a. 通过 register_blkdev() 向内核注册块设备。（仅注册，初始化的其他操作在mmc_driver结构体的**prob接口**中完成）
-  
+
 借助该块设备驱动模型，将mmc card与vfs（虚拟文件系统）完成了关联，即可通过系统调用借助VFS模型实现对块设备的读写访问操作。
 
 b. 调用 mmc_register_driver() 将 mmc_driver 注册到 mmc_bus 总线系统。简单封装，和大部分驱动注册方式一致。
@@ -290,11 +294,11 @@ module_init(sdio_uart_init);
 
 static int __init sdio_uart_init(void)
 {
-	// ……
-	ret = tty_register_driver(tty_drv);
+    // ……
+    ret = tty_register_driver(tty_drv);
 
-	ret = sdio_register_driver(&sdio_uart_driver);
-	// ……
+    ret = sdio_register_driver(&sdio_uart_driver);
+    // ……
 }
 ```
 
@@ -303,9 +307,9 @@ static int __init sdio_uart_init(void)
 ```c
 int sdio_register_driver(struct sdio_driver *drv)
 {
-	drv->drv.name = drv->name;
-	drv->drv.bus = &sdio_bus_type;
-	return driver_register(&drv->drv);
+    drv->drv.name = drv->name;
+    drv->drv.bus = &sdio_bus_type;
+    return driver_register(&drv->drv);
 }
 EXPORT_SYMBOL_GPL(sdio_register_driver);
 ```
@@ -322,34 +326,34 @@ EXPORT_SYMBOL_GPL(sdio_register_driver);
 module_platform_driver(mvsd_driver);
 
 static struct platform_driver mvsd_driver = device_register{
-	.probe		= mvsd_probe,
-	.remove		= mvsd_remove,
-	.driver		= {
-		.name	= DRIVER_NAME,
-		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
-		.of_match_table = mvsdio_dt_ids,
-	},
+    .probe        = mvsd_probe,
+    .remove        = mvsd_remove,
+    .driver        = {
+        .name    = DRIVER_NAME,
+        .probe_type = PROBE_PREFER_ASYNCHRONOUS,
+        .of_match_table = mvsdio_dt_ids,
+    },
 };
 
 // 在probe回调中调用
 static int mvsd_probe(struct platform_device *pdev)
 {
-	// ……
-	// 实例化一个控制器对象
-	mmc = mmc_alloc_host(sizeof(struct mvsd_host), &pdev->dev);
-	// ……
-	mmc->ops = &mvsd_ops;  // 控制器操作集
-	// ……（一系列对控制器对象的初始化工作）
-	ret = mmc_add_host(mmc);
-	// ……
+    // ……
+    // 实例化一个控制器对象
+    mmc = mmc_alloc_host(sizeof(struct mvsd_host), &pdev->dev);
+    // ……
+    mmc->ops = &mvsd_ops;  // 控制器操作集
+    // ……（一系列对控制器对象的初始化工作）
+    ret = mmc_add_host(mmc);
+    // ……
 }
 
 // 控制器操作集，编写控制器驱动的一个主要任务就是实现这个操作集
 static const struct mmc_host_ops mvsd_ops = {
-	.request		= mvsd_request,  // 最终执行硬件操作的函数，参数由核心层提供，由核心层更上一层的card设备驱动层向下调用
-	.get_ro			= mmc_gpio_get_ro,  // 判断是否写保护
-	.set_ios		= mvsd_set_ios,  // 配置控制器的函数
-	.enable_sdio_irq	= mvsd_enable_sdio_irq,  // 与sdio相关
+    .request        = mvsd_request,  // 最终执行硬件操作的函数，参数由核心层提供，由核心层更上一层的card设备驱动层向下调用
+    .get_ro            = mmc_gpio_get_ro,  // 判断是否写保护
+    .set_ios        = mvsd_set_ios,  // 配置控制器的函数
+    .enable_sdio_irq    = mvsd_enable_sdio_irq,  // 与sdio相关
 };
 ```
 
@@ -362,10 +366,10 @@ mmc host子系统提供了延迟队列机制，在执行mmc_alloc_host、mmc_add
 ```c
 struct mmc_host *mmc_alloc_host(int extra, struct device *dev)
 {
-	// ……
-	// 将mmc_rescan指定为延时工作队列的工作函数
-	INIT_DELAYED_WORK(&host->detect, mmc_rescan);
-	// ……
+    // ……
+    // 将mmc_rescan指定为延时工作队列的工作函数
+    INIT_DELAYED_WORK(&host->detect, mmc_rescan);
+    // ……
 }
 
 EXPORT_SYMBOL(mmc_alloc_host);
@@ -377,25 +381,25 @@ EXPORT_SYMBOL(mmc_alloc_host);
 
 ```c
 mmc_rescan[core.c]-->
-	mmc_rescan_try_freq[core.c]-->
-		mmc_attach_sdio[sdio.c]-->
-			mmc_attach_bus[core.c]
-			mmc_sdio_init_card[sdio.c]-->
-				mmc_alloc_card[bus.c]
-			sdio_init_func[sdio.c]-->
-				sdio_alloc_func[sdio_bus.c]
-			mmc_add_card[bus.c]
-			sdio_add_func[sdio_bus.c]
-		mmc_attach_sd[sd.c]-->
-			mmc_attach_bus[core.c]
-			mmc_sd_init_card[sd.c]-->
-				mmc_alloc_card[bus.c]
-			mmc_add_card[bus.c]
-		mmc_attach_mmc[mmc.c]-->
-			mmc_attach_bus[core.c]
-			mmc_init_card[mmc.c]-->
-				mmc_alloc_card[bus.c]
-			mmc_add_card[bus.c]
+    mmc_rescan_try_freq[core.c]-->
+        mmc_attach_sdio[sdio.c]-->
+            mmc_attach_bus[core.c]
+            mmc_sdio_init_card[sdio.c]-->
+                mmc_alloc_card[bus.c]
+            sdio_init_func[sdio.c]-->
+                sdio_alloc_func[sdio_bus.c]
+            mmc_add_card[bus.c]
+            sdio_add_func[sdio_bus.c]
+        mmc_attach_sd[sd.c]-->
+            mmc_attach_bus[core.c]
+            mmc_sd_init_card[sd.c]-->
+                mmc_alloc_card[bus.c]
+            mmc_add_card[bus.c]
+        mmc_attach_mmc[mmc.c]-->
+            mmc_attach_bus[core.c]
+            mmc_init_card[mmc.c]-->
+                mmc_alloc_card[bus.c]
+            mmc_add_card[bus.c]
 ```
 
 从mmc_rescan调用关系中可以看出，mmc设备注册的过程依次完成了sdio设备、sd卡和mmc卡设备的初始化。
@@ -418,7 +422,7 @@ b. 设置sdio卡的总线操作集```mmc_attach_bus()```，传入struct mmc_bus_
 ```c
 void mmc_attach_bus(struct mmc_host *host, const struct mmc_bus_ops *ops)
 {
-	host->bus_ops = ops;
+    host->bus_ops = ops;
 }
 ```
 
@@ -473,19 +477,19 @@ e. 为card构造对应的mmc_card并且注册到mmc_bus中```mmc_add_card()```�
 
 ```c
 struct mmc_bus_ops {
-	void (*remove)(struct mmc_host *);
-	void (*detect)(struct mmc_host *);
-	int (*pre_suspend)(struct mmc_host *);
-	int (*suspend)(struct mmc_host *);
-	int (*resume)(struct mmc_host *);
-	int (*runtime_suspend)(struct mmc_host *);
-	int (*runtime_resume)(struct mmc_host *);
-	int (*alive)(struct mmc_host *);
-	int (*shutdown)(struct mmc_host *);
-	int (*hw_reset)(struct mmc_host *);
-	int (*sw_reset)(struct mmc_host *);
-	bool (*cache_enabled)(struct mmc_host *);
-	int (*flush_cache)(struct mmc_host *);
+    void (*remove)(struct mmc_host *);
+    void (*detect)(struct mmc_host *);
+    int (*pre_suspend)(struct mmc_host *);
+    int (*suspend)(struct mmc_host *);
+    int (*resume)(struct mmc_host *);
+    int (*runtime_suspend)(struct mmc_host *);
+    int (*runtime_resume)(struct mmc_host *);
+    int (*alive)(struct mmc_host *);
+    int (*shutdown)(struct mmc_host *);
+    int (*hw_reset)(struct mmc_host *);
+    int (*sw_reset)(struct mmc_host *);
+    bool (*cache_enabled)(struct mmc_host *);
+    int (*flush_cache)(struct mmc_host *);
 };
 ```
 
@@ -493,8 +497,20 @@ struct mmc_bus_ops {
 
 #### 1. 控制器结构体定义
 
-该模块最重要的数据结构为mmc_host，用于描述一个mmc controller，而围绕着mmc controller又定义了相应的数据结构，用于描述mmc controller的各种行为（包括针对该mmc controller的访问方法抽象而来的数据结构mmc_host_ops、该mmc controller相关的参数抽象而来的数据结构体mmc_ios、针对mmc card相关的电源管理及在位检测方法抽象而来的数据结构mmc_bus_ops）
+该模块最重要的数据结构为```mmc_host```，位于```core/host.h```文件，用于描述一个mmc controller
 
+而围绕着mmc controller又定义了相应的数据结构，用于描述mmc controller的各种行为（包括针对该mmc controller的访问方法抽象而来的数据结构```mmc_host_ops```、该mmc controller相关的参数抽象而来的数据结构体```mmc_ios```、针对mmc card相关的电源管理及在位检测方法抽象而来的数据结构```mmc_bus_ops```）
+
+部分成员如下：
+
+- `struct device class_dev`
+  host对应的device，用于借助设备模型与系统中注册的设备、class完成关联。
+- `const struct mc_host_ops *ops`
+  定义本mmc_host的操作接口，包括与mmccard通信的接口request、卡检测相关的接口等。
+- 块设备相关参数，包括段大小、块大小等。
+- `u32 caps` `u32 caps2`
+  指示host支持的功能特性，包括4bit数据模式、mmc high speed mode、sd high speed mode、spi mode、8bit data、noneremovable mode（emmc mode）、cd与wp引脚的active high/low等等。
+- 
 
 ## MMC驱动注册
 
@@ -574,8 +590,7 @@ mmc_ops提供了部分和mmc卡协议相关的操作。
 
 **mmc_select_card & mmc_deselect_cards**
 发送CMD7指令，SELECT/DESELECT CARD
-选择或者断开指定的card
-这时卡进入transfer state。后续可以通过各种指令进入到receive-data state或者sending-data state依次来进行数据的传输
+选择或者断开指定的car成员或者sending-data state依次来进行数据的传输
 
 **mmc_get_ext_csd**
 发送CMD8指令，SEND_EXT_CSD
@@ -598,6 +613,41 @@ mmc_ops提供了部分和mmc卡协议相关的操作。
 发送CMD5命令，MMC_SLEEP_AWAKE
 使card进入或者退出sleep state，由参数决定。关于sleep state是指card的一种状态，具体参考emmc 5.1协议。
 
+## DTS配置
+
+参考瑞芯微RK3568，配置文件位于
+
+```bash
+ARM：arch/arm/boot/dts/  // 主要是芯片级的配置，无需修改
+ARM64：arch/arm64/boot/dts/rockchip  // 主要是板级相关的配置，可以根据实际需求修改
+```
+
+对应文件为
+
+```bash
+arch\arm64\boot\dts\rockchip\rk3568.dtsi
+arch\arm68\boot\dts\rockchip\rk3568-pinctrl.dsti
+arch\arm64\boot\dts\rockchip\rk3568-evb1-v10.dts
+```
+
+rk3568.dtsi
+
+```dtsi
+    sdmmc0: mmc@fe2b0000 {
+        compatible = "rockchip,rk3568-dw-mshc", "rockchip,rk3288-dw-mshc";
+        reg = <0x0 0xfe2b0000 0x0 0x4000>;
+        interrupts = <GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>;
+        clocks = <&cru HCLK_SDMMC0>, <&cru CLK_SDMMC0>,
+             <&cru SCLK_SDMMC0_DRV>, <&cru SCLK_SDMMC0_SAMPLE>;
+        clock-names = "biu", "ciu", "ciu-drive", "ciu-sample";
+        fifo-depth = <0x100>;
+        max-frequency = <150000000>;
+        resets = <&cru SRST_SDMMC0>;
+        reset-names = "reset";
+        status = "disabled";
+    };
+```
+
 ## 参考资料
 
 1. [Linux MMC 驱动子系统](https://www.cnblogs.com/hueyxu/p/13751636.html)
@@ -610,3 +660,4 @@ mmc_ops提供了部分和mmc卡协议相关的操作。
 8. [LINUX设备驱动模型分析之三 驱动（DRIVER）接口分析](https://jerry-cheng.blog.csdn.net/article/details/102768085)
 9. [LINUX MMC 子系统分析之六 MMC card添加流程分析](https://blog.csdn.net/lickylin/article/details/104718117)
 10. [Linux内核4.14版本——mmc core(4)——card相关模块（mmc type card）](https://blog.csdn.net/yangguoyu8023/article/details/122554472)
+11. [Rockchip RK3588 kernel dts解析之MMC_loitawu的博客-CSDN博客](https://blog.csdn.net/weixin_43245753/article/details/124461034?spm=1001.2101.3001.6650.7&utm_medium=distribute.pc_relevant.none-task-blog-2~default~BlogCommendFromBaidu~Rate-7-124461034-blog-100496004.pc_relevant_3mothn_strategy_and_data_recovery&depth_1-utm_source=distribute.pc_relevant.none-task-blog-2~default~BlogCommendFromBaidu~Rate-7-124461034-blog-100496004.pc_relevant_3mothn_strategy_and_data_recovery&utm_relevant_index=8)
