@@ -14,7 +14,7 @@
 
 #define MAX_BUF_LEN 100
 static const char* CHRDEVNAME = "asyncdev";
-static const char* INODENAME = "asyncinode";
+static const char* CLASSNAME = "asyncclass";
 static const char* DEVICENAME = "asyncdevice";
 
 struct async_dev {
@@ -47,7 +47,8 @@ struct file_operations fops = {
 
 void setup_cdev(void){
     struct device *devices;
-    // 注册到/dev目录下
+    // 注册字符设备驱动
+    // 设备将被添加到/proc/device文件中
     int ret = alloc_chrdev_region(&dev.devid, 0, 1, CHRDEVNAME);
     if (ret)
         goto out;
@@ -63,13 +64,13 @@ void setup_cdev(void){
         goto out1;
 
     // class结构体在linux中表示一种设备的集合，会出现在/sys/class中
-    dev.cdevclass = class_create(THIS_MODULE, INODENAME);
+    dev.cdevclass = class_create(THIS_MODULE, CLASSNAME);
     if (IS_ERR(dev.cdevclass))
         goto out2;
     
     // 使用class创建设备，依赖于用户空间的udev工具
     // 加载模块的时候，用户空间中的udev会自动响应device_create(…)函数，去/sysfs下寻找对应的类从而创建设备节点
-    // 最终在/dev下找到该设备文件，使用cat命令可以查看相应操作
+    // 最终在/dev下创建该设备文件
     devices = device_create(dev.cdevclass, NULL, dev.devid, NULL, DEVICENAME);
     if (devices == NULL) {
         goto out3;
@@ -83,13 +84,11 @@ out2:
     cdev_del(&dev.cdev);
 out1:
     unregister_chrdev_region(dev.devid, 1);
-    kfree(&dev.cdev);
 out: 
     return;
 }
 
 static int __init async_init(void){
-    int ret = 0;
     printk(KERN_INFO "Test async message\n");
     printk(KERN_INFO "The process is \"%s\" (pid %i)\n", current->comm, current->pid);
     
@@ -103,7 +102,6 @@ static void __exit async_exit(void){
     class_destroy(dev.cdevclass);  // 删除类
     cdev_del(&dev.cdev);  // 删除cdev
     unregister_chrdev_region(dev.devid, 1);
-    kfree(&dev.cdev);
     printk("module clean up!\n");
 }
 

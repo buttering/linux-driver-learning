@@ -139,12 +139,12 @@ static void setup_cdev(void){
 //     return;
 out1:
     unregister_chrdev_region(dev.devid, CDEVCOUNT);
-    kfree(&dev.cdev);
+    // kfree(&dev.cdev);
     return;
 out2:
     cdev_del(&dev.cdev);
     unregister_chrdev_region(dev.devid, CDEVCOUNT);
-    kfree(&dev.cdev);
+    // kfree(&dev.cdev);
     return;
 }
 
@@ -170,7 +170,7 @@ static void __exit poll_exit(void){
     class_destroy(cdevclass);
     cdev_del(&dev.cdev);
     unregister_chrdev_region(dev.devid, CDEVCOUNT);
-    kfree(&dev.cdev);
+    // kfree(&dev.cdev);
     printk("this is dev_module_cleanup\n");
 }
 

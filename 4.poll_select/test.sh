@@ -12,21 +12,22 @@ then
     exit     
 fi
 test_file_name=$1
-if [ $test_file_name = "poll_select" ]
+if [ $test_file_name = "async" ]
 then
-    module="poll_select"
-    devicefolder="polldev"
-    device="dev"
-    testfile="test_poll"
+    module_name="async"
+    # /dev目录下的chrdevice
+    device_name="asyncdevice"
+    chrdev_name="asyncdev"
+    class_name="asyncclass"
+    testfile=""
 else 
     echo "\033[31mnot match file name!\033[31m"
     exit
 fi
 echo -n "\033[33mmodule: \033[0m"
-echo $module
+echo $module_name
 echo -n "\033[33mdevice: \033[0m"
-echo $device
-
+echo $device_name
 
 # 运行clean
 sh clean.sh $test_file_name
@@ -39,52 +40,32 @@ echo "\033[33m---OLD DRIVER CLEARED---\n\033[0m"
 echo -n "\033[33mkernal: \033[0m"
 uname -r
 
-# 挂载驱动程序
-sudo insmod $module.ko 
+# 挂载驱动程序，lsmod显示/proc/modules目录下的节点
+sudo insmod $module_name.ko
 echo -n "\033[33mload driver: \033[0m"
-lsmod | grep $module
+lsmod | grep $module_name
 
-# 在/dev目录下注册  使用create_class 和 create_device 无需使用mknod手动注册
+# 显示已由create_device注册好的设备文件
 echo -n "\033[33mload device node: \033[0m"
-ls -l /dev/${devicefolder}
+ls -l /dev/$device_name
 
-# 提供权限，这里为四个子设备添加组内读写权限
 group="wang"
-sudo chgrp $group /dev/${devicefolder}/${device}[0-3]
-sudo chmod 664 /dev/${devicefolder}/${device}[0-3]
+sudo chgrp $group /dev/$device_name
+sudo chmod 664 /dev/$device_name
 echo -n "\033[33mdevice node change group: \033[0m"
-ls -l /dev/${devicefolder}
+ls -l /dev/$device_name
 
 dmesg_and_clean
 
-# 编译测试文件
-gcc ${testfile}.c -o ${testfile}
+echo "\033[33m----驱动加载成功!----\033[0m"
+echo -n "\033[33m/proc/device field: \033[0m"
+cat /proc/devices | grep $chrdev_name
+echo -n "\033[33m/sys/class node: \033[0m"
+ls -l /sys/class | grep $class_name
+echo -n "\033[33m/dev node: \033[0m"
+ls -l /dev | grep $device_name
 
-echo "\033[33m\npoll调用前资源已就绪，只调用poll一次\033[0m"
-echo "yt" > /dev/${devicefolder}/${device}2
-dmesg_and_clean
-./${testfile} -1
-dmesg_and_clean
 
-echo "\033[33m\n不进行唤醒，且规定时间内(5s)资源未就绪，在调用时和超时时各调用一次\033[0m"
-echo "nt" > /dev/${devicefolder}/${device}2
-dmesg_and_clean
-./${testfile} 5000
-dmesg_and_clean
+echo "\033[33m可用的kill信号: \033[0m"
+/bin/kill -L
 
-echo "\033[33m\n主动进行唤醒，且唤醒时资源已就绪 , 在调用时和被唤醒时各调用一次\033[0m"
-echo "nt" > /dev/${devicefolder}/${device}2
-dmesg_and_clean
-./${testfile} -1 &
-sleep 0.01
-echo "yb" > /dev/${devicefolder}/${device}2
-dmesg_and_clean
-
-echo "\033[33m\n主动进行唤醒，但唤醒时资源未就绪，在调用时和被唤醒时各调用一次，会保持阻塞状态直到超时或再次被唤醒\033[0m"
-echo "nt" > /dev/${devicefolder}/${device}2
-dmesg_and_clean
-./${testfile} 5000 &
-sleep 0.01
-echo "nb" > /dev/${devicefolder}/${device}2
-dmesg_and_clean
-wait
