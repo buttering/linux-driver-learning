@@ -1,26 +1,25 @@
 # Linxu MMC 驱动子系统
 
 - [Linxu MMC 驱动子系统](#linxu-mmc-驱动子系统)
-	- [硬件关联](#硬件关联)
-	- [目录说明](#目录说明)
-	- [mmc子系统的逻辑架构](#mmc子系统的逻辑架构)
-	- [设备-总线-驱动模型](#设备-总线-驱动模型)
-		- [一、MMC驱动抽象模型](#一mmc驱动抽象模型)
-		- [二、SDIO驱动抽象模型](#二sdio驱动抽象模型)
-		- [三、MMC/SDIO总线](#三mmcsdio总线)
-			- [1. 总线结构体定义](#1-总线结构体定义)
-			- [2. 总线注册](#2-总线注册)
-			- [3. 驱动注册](#3-驱动注册)
-			- [4. 设备注册](#4-设备注册)
-		- [四、MMC设备控制器（mmc host）](#四mmc设备控制器mmc-host)
-			- [1. 控制器结构体定义](#1-控制器结构体定义)
-	- [指示host支持的功能特性，包括4bit数据模式、mmc high speed mode、sd high speed mode、spi mode、8bit data、noneremovable mode（emmc mode）、cd与wp引脚的active high/low等等。](#指示host支持的功能特性包括4bit数据模式mmc-high-speed-modesd-high-speed-modespi-mode8bit-datanoneremovable-modeemmc-modecd与wp引脚的active-highlow等等)
-	- [MMC驱动注册](#mmc驱动注册)
-	- [MMC设备注册](#mmc设备注册)
-	- [注册过程(瑞芯微MMC驱动源码)](#注册过程瑞芯微mmc驱动源码)
-	- [mmc卡(mmc type card)协议相关操作](#mmc卡mmc-type-card协议相关操作)
-	- [DTS配置](#dts配置)
-	- [参考资料](#参考资料)
+  - [硬件关联](#硬件关联)
+  - [目录说明](#目录说明)
+  - [mmc子系统的逻辑架构](#mmc子系统的逻辑架构)
+  - [设备-总线-驱动模型](#设备-总线-驱动模型)
+    - [一、MMC驱动抽象模型](#一mmc驱动抽象模型)
+    - [二、SDIO驱动抽象模型](#二sdio驱动抽象模型)
+    - [三、MMC/SDIO总线](#三mmcsdio总线)
+      - [1. 总线结构体定义](#1-总线结构体定义)
+      - [2. 总线注册](#2-总线注册)
+      - [3. 驱动注册](#3-驱动注册)
+      - [4. 设备注册](#4-设备注册)
+    - [四、MMC设备控制器（mmc host）](#四mmc设备控制器mmc-host)
+      - [1. 控制器结构体定义](#1-控制器结构体定义)
+  - [MMC驱动注册](#mmc驱动注册)
+  - [MMC设备注册](#mmc设备注册)
+  - [注册过程(瑞芯微MMC驱动源码)](#注册过程瑞芯微mmc驱动源码)
+  - [mmc卡(mmc type card)协议相关操作](#mmc卡mmc-type-card协议相关操作)
+  - [DTS配置](#dts配置)
+  - [参考资料](#参考资料)
 
 SD/SDIO/MMC 驱动是一种基于 SDMMC 和 SD SPI 主机驱动的协议级驱动程序，目前已支持 SD 存储器、SDIO 卡和 eMMC 芯片。
 
@@ -503,14 +502,14 @@ struct mmc_bus_ops {
 
 部分成员如下：
 
-- `struct device class_dev`
+- `struct device class_dev`:
   host对应的device，用于借助设备模型与系统中注册的设备、class完成关联。
-- `const struct mc_host_ops *ops`
+- `const struct mc_host_ops *ops`:
   定义本mmc_host的操作接口，包括与mmccard通信的接口request、卡检测相关的接口等。
 - 块设备相关参数，包括段大小、块大小等。
-- `u32 caps` `u32 caps2`
+- `u32 caps` `u32 caps2`:
   指示host支持的功能特性，包括4bit数据模式、mmc high speed mode、sd high speed mode、spi mode、8bit data、noneremovable mode（emmc mode）、cd与wp引脚的active high/low等等。
-- 
+  
 
 ## MMC驱动注册
 
