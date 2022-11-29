@@ -1,16 +1,23 @@
 // THIS_MODULE
-#include "linux/err.h"
 #include <linux/module.h>
 // current
 #include <linux/sched.h>
 // struct cdev, struct inode, struct file, cdev_del()
 #include <linux/cdev.h>
-// struct file_operaction, register_chrdev_region(), alloc_chrdev_region(), unregister_chrdev_region()
+// struct file_operaction, register_chrdev_region(), alloc_chrdev_region(), unregister_chrdev_region(), struct fasync_struct, kill_fasync()
 #include <linux/fs.h>
 // kfree(), kmalloc() 
 #include <linux/slab.h>
 // contain_of()
 #include <linux/kernel.h>
+// SIGIO
+#include "asm/signal.h"
+// IS_ERR
+#include "linux/err.h"
+// PULL_IN, PULL_OUT
+#include "asm-generic/siginfo.h"
+// copy_to_user()
+#include <linux/uaccess.h>
 
 #define MAX_BUF_LEN 100
 static const char* CHRDEVNAME = "asyncdev";
@@ -25,14 +32,14 @@ struct async_dev {
     struct cdev cdev;  // cdev
     struct class *cdevclass;  // 字符设备逻辑类
     struct device *device;  // 设备
-    char readbuf[MAX_BUF_LEN];
-    char writebuf[MAX_BUF_LEN];
+    char databuf[MAX_BUF_LEN];
+    struct fasync_struct *fasyncQueue;  // 异步通知等待队列
 }dev;
 
 static int async_open(struct inode *inode, struct file *filp) {
-    struct async_dev *pdev;
-    pdev = container_of(inode->i_cdev, struct async_dev, cdev);
-    filp->private_data = pdev;
+    struct async_dev *dev;
+    dev = container_of(inode->i_cdev, struct async_dev, cdev);
+    filp->private_data = dev;
     return 0;
 }
 
@@ -40,9 +47,85 @@ static int async_release(struct inode *inode, struct file *filp){
     return 0;
 }
 
+// 写入数据触发异步通知
+static ssize_t async_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos) {
+    int ret;
+    int signal;
+    struct async_dev *dev = filp->private_data;
+    if ( count > MAX_BUF_LEN )
+        count = MAX_BUF_LEN;
+    
+    memset(dev->databuf, 0, MAX_BUF_LEN);
+    ret = copy_from_user(dev->databuf, buf, count);
+    if (ret)
+        return -EFAULT;
+    printk("[write]Get data: %s", dev->databuf);
+
+    /* 
+    TODO:因为未知原因，驱动只能向用户程序发送SIGIO(29)信号，
+    即使主动发送其他信号，用户程序接收到的依然是29号信号
+     */
+    // ret = kstrtouint(dev->databuf, 10, &signal);  // 转化为数字，成功返回0
+    // if (ret){
+    //     printk("[wirte]Data is not a number\n");
+    //     signal = 0;
+    // }
+    // switch (signal) {
+    //     case SIGIO:
+    //     case SIGQUIT:
+    //     case SIGUSR1:
+    //     case SIGUSR2:
+    //         break;
+    //     default:
+    //         signal = 0;  // 只能发送指定的信号
+    // }
+
+    signal = SIGIO;
+
+    /*     
+    void kill_fasync(struct fasync_struct **fp, int sig, int band)
+    fp：要操作的 fasync_struct。
+    sig： 要发送的信号。
+    band： 可读时设置为 POLL_IN，可写时设置为 POLL_OUT。 
+    */
+    if (signal != 0 && dev->fasyncQueue) {
+        // kill_fasync(&dev->fasyncQueue, signal, POLL_IN);
+        kill_fasync(&dev->fasyncQueue, signal, POLL_IN);
+        // printk("[write]Send async signal: %d\n", signal);
+        printk("[write]Send async signal: %d\n", SIGIO);
+    }
+
+    return count;
+}
+
+static ssize_t async_read(struct file *filp, char __user *buf, size_t count, loff_t *pos) {
+    int ret;
+    struct async_dev *dev = filp->private_data;
+    if (count > MAX_BUF_LEN) 
+        count = MAX_BUF_LEN;
+    ret = copy_to_user(buf, dev->databuf, count);
+    if (ret)
+        return -EFAULT;
+    printk("[read]Output data: %s\n", dev->databuf);
+    
+    return count;
+}
+
+// 异步通知必须实现这个函数接口，将参数和等待队列传入内核方法
+static int async_fasync(int fd, struct file *filp, int mode){
+    struct async_dev *dev = filp->private_data;
+    // fasync_struct由该函数自动完成初始化
+    printk("[fasync]regist async\n");
+    return fasync_helper(fd, filp, mode, &dev->fasyncQueue);
+}
+
 struct file_operations fops = {
+    .owner = THIS_MODULE,
     .open = async_open,
-    .release = async_release
+    .release = async_release,
+    .fasync = async_fasync,
+    .write = async_write,
+    .read = async_read
 };
 
 void setup_cdev(void){
@@ -54,7 +137,7 @@ void setup_cdev(void){
         goto out;
     dev.major = MAJOR(dev.devid);
     dev.minor = MINOR(dev.devid);
-    printk("dev major = %d, minor = %d\n",dev.major, dev.minor);
+    printk("[init]dev major = %d, minor = %d\n",dev.major, dev.minor);
 
     // 将fops注册到dev的cdev上
     cdev_init(&dev.cdev, &fops);
@@ -89,8 +172,8 @@ out:
 }
 
 static int __init async_init(void){
-    printk(KERN_INFO "Test async message\n");
-    printk(KERN_INFO "The process is \"%s\" (pid %i)\n", current->comm, current->pid);
+    printk(KERN_INFO "[init]Test async message\n");
+    printk(KERN_INFO "[init]The process is \"%s\" (pid %i)\n", current->comm, current->pid);
     
     setup_cdev();
 
@@ -102,7 +185,7 @@ static void __exit async_exit(void){
     class_destroy(dev.cdevclass);  // 删除类
     cdev_del(&dev.cdev);  // 删除cdev
     unregister_chrdev_region(dev.devid, 1);
-    printk("module clean up!\n");
+    printk("[exit]module clean up!\n");
 }
 
 
