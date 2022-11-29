@@ -8,6 +8,7 @@
     - [2. proc\_interface.c](#2-proc_interfacec)
     - [3. wait\_wakeup\_ioctl.c](#3-wait_wakeup_ioctlc)
     - [4. poll\_select.c](#4-poll_selectc)
+    - [5. async.c](#5-asyncc)
   - [实验环境](#实验环境)
 
 ## 项目说明
@@ -22,6 +23,7 @@
 5. 阻塞操作
 6. ioctl调用
 7. poll调用
+8. async异步通知
 
 ## 项目结构
 
@@ -46,7 +48,7 @@
 
 本文件完成驱动程序基本的注册、挂载和卸载，并测试file_operations结构体的使用(读取、写入操作）。
 
-1. 进入目录
+1)进入目录
 
 ```shell
 cd 1.hello_driver
@@ -54,19 +56,19 @@ chmod +x test.sh
 chmod +x clean.sh
 ```
 
-2.编译驱动
+2)编译驱动
 
 ```shell
 make
 ```
 
-3.运行测试文件
+3)运行测试文件
 
 ```shell
 sh test.sh hello_driver
 ```
 
-4.运行结果
+4)运行结果
 
 ```shell
 ❯ sh test.sh hello_driver
@@ -97,7 +99,7 @@ App read data:This is the kernel data
 [ 2315.576328] dev file closed
 ```
 
-6.卸载和清理驱动
+5)卸载和清理驱动
 
 ```shell
 sh ./clean.sh hello_driver
@@ -108,7 +110,7 @@ make clean
 
 测试proc接口的挂载操作，并尝试从/proc接口中读取信息。
 
-1.进入目录并授权
+1)进入目录并授权
 
 ```makefile
 cd 2.proc_interface
@@ -116,19 +118,19 @@ chmod +x test.sh
 chmod +x clean.sh
 ```
 
-2.编译驱动并运行测试脚本
+2)编译驱动并运行测试脚本
 
 ```shell
 make
 ```
 
-3.运行测试脚本
+3)运行测试脚本
 
 ```shell
 sh test.sh proc_interface
 ```
 
-4.运行结果
+4)运行结果
 
 ```shell
 ❯ sh test.sh proc_interface
@@ -151,7 +153,7 @@ proc information is: This is a /proc interface output.
 
 ```
 
-5.卸载和清理驱动
+5)卸载和清理驱动
 
 ```shell
 sh ./clean.sh proc_interface
@@ -162,7 +164,7 @@ make clean
 
 测试linux内核的阻塞与唤醒操作和原子化操作，以及测试ioctl调用
 
-1.进入目录并授权测试脚本
+1)进入目录并授权测试脚本
 
 ```makefile
 cd 3.wait_wakeup_ioctl
@@ -170,19 +172,19 @@ chmod +x test.sh
 chmod +x clean.sh
 ```
 
-2.编译驱动
+2)编译驱动
 
 ```shell
 make
 ```
 
-3.运行测试脚本
+3)运行测试脚本
 
 ```shell
 sh test.sh wait_wakeup_ioctl
 ```
 
-4.运行结果
+4)运行结果
 
 ```shell
 ❯ sh test.sh wait_wakeup_ioctl
@@ -215,7 +217,7 @@ ioctl read result: 55
 [ 3734.521588] [ioctl read] output number by return: 55
 ```
 
-5.继续尝试和写入读取操作
+5)继续尝试和写入读取操作
 
 通过读取操作实现阻塞，可开启多个终端运行
 
@@ -230,7 +232,7 @@ echo 1 > /dev/wwdev
 dmesg
 ```
 
-6.卸载和清理驱动
+6)卸载和清理驱动
 
 ```shell
 sh clean.sh wait_wakeup_ioctl
@@ -241,7 +243,7 @@ make clean
 
 实验了poll系统调用的各种情况，使用class_create完成自动节点注册和多节点挂载
 
-1.进入目录，提供权限
+1)进入目录，提供权限
 
 ```shell
 cd poll_select
@@ -249,19 +251,19 @@ chmod +x test.sh
 chmod +x clean.sh
 ```
 
-2.编译驱动
+2)编译驱动
 
 ```shell
 make
 ```
 
-3.运行测试脚本
+3)运行测试脚本
 
 ```shell
 sh test.sh poll_select
 ```
 
-4.运行结果
+4)运行结果
 
 ```shell
 ❯ sh test.sh poll_select
@@ -319,7 +321,84 @@ get data: This is the kernal data!
 not fds get ready, timeout!
 ```
 
-5.清理环境
+5)清理环境
+
+```shell
+sh clean.sh poll_select
+make clean
+```
+
+### 5. async.c
+
+1)进入目录，提供权限
+
+```shell
+cd async
+chmod +x test.sh
+chmod +x clean.sh
+```
+
+2)编译驱动
+
+```shell
+make
+```
+
+3)运行测试脚本
+
+```shell
+sh test.sh async
+```
+
+4)运行结果
+
+```shell
+❯ sh test.sh async
+module: async
+device: asyncdevice
+[  745.014143] rockchip_canfd fe580000.can can0: rockchip_canfd_get_berr_counter RX_ERR_CNT=0x00000000, TX_ERR_CNT=0x00000000
+[  745.106335] rockchip_canfd fe580000.can can0: rockchip_canfd_get_berr_counter RX_ERR_CNT=0x00000000, TX_ERR_CNT=0x00000000
+[  745.159886] [exit]module clean up!
+---OLD DRIVER CLEARED---
+
+kernal: 4.19.193-47-rockchip-g0f91d24e217c
+load driver: async                  16384  0
+load device node: crw------- 1 root root 238, 0 Nov 29 10:46 /dev/asyncdevice
+device node change group: crw-rw-r-- 1 root wang 238, 0 Nov 29 10:46 /dev/asyncdevice
+[  745.328000] rockchip_canfd fe580000.can can0: rockchip_canfd_get_berr_counter RX_ERR_CNT=0x00000000, TX_ERR_CNT=0x00000000
+[  745.387800] [init]Test async message
+[  745.387824] [init]The process is "insmod" (pid 4147)
+[  745.387834] [init]dev major = 238, minor = 0
+[  745.450891] rockchip_canfd fe580000.can can0: rockchip_canfd_get_berr_counter RX_ERR_CNT=0x00000000, TX_ERR_CNT=0x00000000
+[  745.533144] rockchip_canfd fe580000.can can0: rockchip_canfd_get_berr_counter RX_ERR_CNT=0x00000000, TX_ERR_CNT=0x00000000
+----驱动加载成功!----
+/proc/device field: 238 asyncdev
+/sys/class node: drwxr-xr-x 2 root root 0 Nov 29 10:46 asyncclass
+/dev node: crw-rw-r--  1 root wang    238,   0 Nov 29 10:46 asyncdevice
+可用的kill信号: 
+ 1 HUP      2 INT      3 QUIT     4 ILL      5 TRAP     6 ABRT     7 BUS
+ 8 FPE      9 KILL    10 USR1    11 SEGV    12 USR2    13 PIPE    14 ALRM
+15 TERM    16 STKFLT  17 CHLD    18 CONT    19 STOP    20 TSTP    21 TTIN
+22 TTOU    23 URG     24 XCPU    25 XFSZ    26 VTALRM  27 PROF    28 WINCH
+29 POLL    30 PWR     31 SYS     
+
+运行用户态程序，监听SIGIO信号。
+[app]Pid: 4209
+[app]Driver file open successed: 3
+[app]Listion signal: SIGIO(29)
+[app]Listion signal: SIGUSR1(10)
+[  746.172878] [fasync]regist async
+
+向驱动写入信息，驱动向用户程序发送SIGIO信号。
+[app]receive signal: 29
+[  746.445004] [write]Get data: User msg
+[  746.445029] [write]Send async signal: 29
+
+使用kill向用户程序发送SIGUSR1信号
+[app]receive signal: 10
+```
+
+5)清理环境
 
 ```shell
 sh clean.sh poll_select
@@ -328,6 +407,8 @@ make clean
 
 ## 实验环境
 
-操作系统：Linux Li-Jiancheng-Ubuntu 5.15.0-50-generic #56~20.04.1-Ubuntu SMP Tue Sep 27 15:51:29 UTC 2022 x86_64 x86_64 x86_64 GNU/Linux
+操作系统：
+实验1-4：Linux Li-Jiancheng-Ubuntu 5.15.0-50-generic #56~20.04.1-Ubuntu SMP Tue Sep 27 15:51:29 UTC 2022 x86_64 x86_64 x86_64 GNU/Linux
+实验5：4.19.193-47-rockchip-g0f91d24e217c
 
 IDE：VSCode
